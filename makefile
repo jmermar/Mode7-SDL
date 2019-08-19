@@ -1,1 +1,2 @@
-g++ -o mode7 main.cpp -lmingw32 -lSDL2main -lSDL2
+mode7:	main.cpp
+	g++ -o mode7 main.cpp -lSDL2main -lSDL2

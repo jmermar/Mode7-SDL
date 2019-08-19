@@ -1,6 +1,9 @@
 #include<SDL2/SDL.h>
 #include<math.h>
 
+const float PI = 3.1415916;
+const float DTR = PI / 180.f;
+
 const int W = 800;
 const int H = 300;
 const int pxs = 1;
@@ -33,6 +36,7 @@ struct Line {
 	}
 };
 
+
 struct Player {
 	Point pos;
 	float dir;
@@ -40,11 +44,11 @@ struct Player {
 	Line getPlane(float dist) {
 		Line line;
 
-		line.a.x = pos.x + cosf((dir * 3.1415916f / 180.f) - fov * 0.5f) * dist;
-		line.a.y = pos.y + sinf((dir * 3.1415916f / 180.f) - fov * 0.5f) * dist;
+		line.a.x = pos.x + cosf((dir * DTR) - fov * 0.5f) * dist;
+		line.a.y = pos.y + sinf((dir * DTR) - fov * 0.5f) * dist;
 
-		line.b.x = pos.x + cosf((dir * 3.1415916f / 180.f) + fov * 0.5f) * dist;
-		line.b.y = pos.y + sinf((dir * 3.1415916f / 180.f) + fov * 0.5f) * dist;
+		line.b.x = pos.x + cosf((dir * DTR) + fov * 0.5f) * dist;
+		line.b.y = pos.y + sinf((dir * DTR) + fov * 0.5f) * dist;
 
 		return line;
 	}
@@ -121,8 +125,8 @@ int main(int argc, char** argv) {
 		if (keys[SDL_SCANCODE_RIGHT]) p.dir += 1.f;
 
 		if (keys[SDL_SCANCODE_UP]) {
-			p.pos.x += cosf(p.dir * 3.1415916f / 180.f);
-			p.pos.y += sinf(p.dir * 3.1415916f / 180.f);
+			p.pos.x += cosf(p.dir * DTR);
+			p.pos.y += sinf(p.dir * DTR);
 		}
 
 		if (keys[SDL_SCANCODE_DOWN]) {
