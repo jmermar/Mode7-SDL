@@ -4,16 +4,11 @@
 const float PI = 3.1415916;
 const float DTR = PI / 180.f;
 
-const int W = 800;
-const int H = 300;
-const int pxs = 1;
+const int W = 400;
+const int H = 200;
+const int pxs = 2;
 
 int tw, th;
-
-const float fov = 90 * (3.1415916f / 180.f);
-float zn = 20.f;
-float zf = 500.f;
-float ndist, fdist;
 
 struct IPoint {
 	int x, y;
@@ -37,33 +32,53 @@ struct Line {
 };
 
 
-struct Player {
+struct Camera {
+private:
+	Point transformPoint(Point& p) {
+		Point ret;
+		ret.x = pos.x + p.x * cosf(dir * DTR) - p.y * sinf(dir * DTR);
+		ret.y = pos.y + p.y * cosf(dir * DTR) + p.x * sinf(dir * DTR);
+		return ret;
+	}
+public:
 	Point pos;
 	float dir;
+	float znear, zfar;
+	Line near, far;
+	float h;
 
-	Line getPlane(float dist) {
-		Line line;
+	void update() {
+		znear = h;
+		near.a.x = -znear;
+		near.a.y = znear;
+		near.a = transformPoint(near.a);
 
-		line.a.x = pos.x + cosf((dir * DTR) - fov * 0.5f) * dist;
-		line.a.y = pos.y + sinf((dir * DTR) - fov * 0.5f) * dist;
+		near.b.x = znear;
+		near.b.y = znear;
+		near.b = transformPoint(near.b);
 
-		line.b.x = pos.x + cosf((dir * DTR) + fov * 0.5f) * dist;
-		line.b.y = pos.y + sinf((dir * DTR) + fov * 0.5f) * dist;
+		zfar = h * 20;
 
-		return line;
+		far.a.x = -zfar;
+		far.a.y = zfar;
+		far.a = transformPoint(far.a);
+
+		far.b.x = zfar;
+		far.b.y = zfar;
+		far.b = transformPoint(far.b);
 	}
 };
 
-Line getProjected(float v, Line& near, Line& far) {
+Line getProjected(Camera& c, float v) {
 	Line ret;
-	float in = 1.f / zn;
-	float ifar = 1.f / zf;
+	float in = 1.f / c.znear;
+	float ifar = 1.f / c.zfar;
 	float iz = in + v * (ifar - in);
-	ret.a.x = near.a.x * in + v * (far.a.x * ifar - near.a.x * in);
-	ret.a.y = near.a.y * in + v * (far.a.y * ifar - near.a.y * in);
+	ret.a.x = c.near.a.x * in + v * (c.far.a.x * ifar - c.near.a.x * in);
+	ret.a.y = c.near.a.y * in + v * (c.far.a.y * ifar - c.near.a.y * in);
 
-	ret.b.x = near.b.x * in + v * (far.b.x * ifar - near.b.x * in);
-	ret.b.y = near.b.y * in + v * (far.b.y * ifar - near.b.y * in);
+	ret.b.x = c.near.b.x * in + v * (c.far.b.x * ifar - c.near.b.x * in);
+	ret.b.y = c.near.b.y * in + v * (c.far.b.y * ifar - c.near.b.y * in);
 
 	ret.a.x /= iz;
 	ret.b.x /= iz;
@@ -96,11 +111,11 @@ int main(int argc, char** argv) {
 	SDL_Surface* tex = SDL_ConvertSurfaceFormat(sur, SDL_PIXELFORMAT_RGBA32, 0);
 	SDL_FreeSurface(sur);
 	SDL_Texture* scr = SDL_CreateTexture(rnd, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, W, H);
-	Player p;
-	p.pos.x = 150;
-	p.pos.y = 150;
-
-	p.dir = 0;
+	Camera c;
+	c.pos.x = 150;
+	c.pos.y = 150;
+	c.h = 16;
+	c.dir = 0;
 
 	tw = tex->w;
 	th = tex->h;
@@ -114,33 +129,25 @@ int main(int argc, char** argv) {
 		}
 
 		if (keys[SDL_SCANCODE_W]) {
-			zn += 0.5f;
-			zf += 0.5f;
+			c.h += 0.5f;
 		}
 		if (keys[SDL_SCANCODE_S]) {
-			zn -= 0.5f;
-			zf -= 0.5f;
+			c.h -= 0.5f;
 		}
-		if (keys[SDL_SCANCODE_LEFT]) p.dir -= 1.f;
-		if (keys[SDL_SCANCODE_RIGHT]) p.dir += 1.f;
+		if (keys[SDL_SCANCODE_LEFT]) c.dir += 1.f;
+		if (keys[SDL_SCANCODE_RIGHT]) c.dir -= 1.f;
 
 		if (keys[SDL_SCANCODE_UP]) {
-			p.pos.x += cosf(p.dir * DTR);
-			p.pos.y += sinf(p.dir * DTR);
+			c.pos.y += cosf(c.dir * DTR);
+			c.pos.x -= sinf(c.dir * DTR);
 		}
 
 		if (keys[SDL_SCANCODE_DOWN]) {
-			p.pos.x -= cosf(p.dir * 3.1415916f / 180.f);
-			p.pos.y -= sinf(p.dir * 3.1415916f / 180.f);
+			c.pos.y -= cosf(c.dir * DTR);
+			c.pos.x += sinf(c.dir * DTR);
 		}
 
-		//p.pos.x += 1.f;
-		//p.dir += 1.f;
-
-		Line near = p.getPlane(zn);
-		Line far = p.getPlane(zf);
-		ndist = near.getDist();
-		fdist = far.getDist();
+		c.update();
 
 		SDL_SetRenderDrawColor(rnd, 100, 100, 255, 0);
 		SDL_RenderClear(rnd);
@@ -148,7 +155,7 @@ int main(int argc, char** argv) {
 		int* tdata = (int*) tex->pixels;
 		for(int y = 0; y < H; y++) {
 			float v = 1.f - ((float) y / (float) H);
-			Line inter = getProjected(v, near, far);
+			Line inter = getProjected(c, v);
 			for(int x = 0; x < W; x++) {
 				float u = (float) x / (float) W;
 
@@ -160,9 +167,9 @@ int main(int argc, char** argv) {
 		SDL_UpdateTexture(scr, NULL, buff, W * 4);
 		SDL_Rect r;
 		r.x = 0;
-		r.y = H;
-		r.w = W;
-		r.h = H;
+		r.y = H * pxs;
+		r.w = W * pxs;
+		r.h = H * pxs;
 		SDL_RenderCopy(rnd, scr, NULL, &r);
 
 		SDL_RenderPresent(rnd);
