@@ -1,5 +1,5 @@
-#include<SDL2/SDL.h>
-#include<math.h>
+#include <SDL.h>
+#include <math.h>
 
 const float PI = 3.1415916;
 const float DTR = PI / 180.f;
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
 		SDL_Event ev;
 
 		while(SDL_PollEvent(&ev)) {
-			if(ev.type == SDL_QUIT) running = false;
+			if(ev.type == SDL_QUIT || keys[SDL_SCANCODE_ESCAPE]) running = false;
 		}
 
 		if (keys[SDL_SCANCODE_W]) {
